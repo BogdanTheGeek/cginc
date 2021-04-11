@@ -1,8 +1,20 @@
 #include "raylib.h"
 #include <math.h>
+#include "raymath.h"
+#define RLIGHTS_IMPLEMENTATION
+#include "rlights.h"
+
+#if defined(PLATFORM_DESKTOP)
+    #define GLSL_VERSION            330
+#else   // PLATFORM_RPI, PLATFORM_ANDROID, PLATFORM_WEB
+    #define GLSL_VERSION            100
+#endif
+#include "stl_loader.h"
 
 #define DEBUG_MODE
 #include "settings.h"
+//globals 
+Color main_color = {187, 35, 255, 255};
 
 //prototypes
 void CustomUpdateCamera(Camera *camera); 
@@ -26,9 +38,47 @@ int main(void){
 	SetCameraMode(camera, CAMERA_CUSTOM); // Set a first person camera mode
 	SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
 
+	//Texture texture = LoadTexture("resources/texel_checker.png");
+	Image texture_image = GenImageColor(1.0f, 1.0f, main_color);
+	Texture texture = LoadTextureFromImage(texture_image);
+
+	Shader shader = LoadShader(TextFormat("resources/shaders/glsl%i/base_lighting.vs", GLSL_VERSION), 
+			TextFormat("resources/shaders/glsl%i/lighting.fs", GLSL_VERSION));
+
+	// Get some shader loactions
+	shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocation(shader, "matModel");
+	shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(shader, "viewPos");
+
+	// ambient light level
+	int ambientLoc = GetShaderLocation(shader, "ambient");
+	SetShaderValue(shader, ambientLoc, (float[4]){ 0.2f, 0.2f, 0.2f, 1.0f }, SHADER_UNIFORM_VEC4);
+
+	Light light = { 0 };
+	light = CreateLight(LIGHT_POINT, (Vector3){ 4, 2, 4 }, Vector3Zero(), WHITE, shader);
+
+	//Model model = LoadModel("bunny.obj");
+	//Model model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
+	Mesh model_mesh = load_stl("resources/test.stl");
+	Model model = LoadModelFromMesh(model_mesh);
+	model.transform = MatrixMultiply(model.transform, MatrixRotateX(DEG2RAD*90));
+	model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+	model.materials[0].shader = shader;
+
+	float model_scale = 0.10f;
+
+
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
 		CustomUpdateCamera(&camera); 
+
+		light.position.x = camera.position.x;
+		light.position.y = camera.position.y;
+		light.position.z = camera.position.z;
+
+		UpdateLightValues(shader, light);
+
+		float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
+		SetShaderValue(shader, shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 
 		BeginDrawing();
 
@@ -36,8 +86,8 @@ int main(void){
 
 		BeginMode3D(camera);
 
-		DrawCube(cubePosition, 2.0f, 2.0f, 2.0f, RED);
-		DrawCubeWires(cubePosition, 2.0f, 2.0f, 2.0f, MAROON);
+		DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, model_scale, GRAY);   // Draw 3d model with texture
+		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, model_scale, BLACK);   // Draw 3d model with texture
 
 		DrawGrid(10, 1.0f);
 
@@ -47,6 +97,9 @@ int main(void){
 
 			EndDrawing();
 	}
+
+	UnloadModel(model);  
+	UnloadTexture(texture);     // Unload the texture
 
 	CloseWindow();        // Close window and OpenGL context
 
