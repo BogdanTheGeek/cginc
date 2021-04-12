@@ -1,6 +1,8 @@
 #include "raylib.h"
 #include <math.h>
+#include <string.h>
 #include "raymath.h"
+
 #define RLIGHTS_IMPLEMENTATION
 #include "rlights.h"
 
@@ -13,13 +15,21 @@
 
 #define DEBUG_MODE
 #include "settings.h"
+
+
 //globals 
 Color main_color = {187, 35, 255, 255};
 
 //prototypes
 void CustomUpdateCamera(Camera *camera); 
+void parse_gcode(char *gcode_file);
 
-int main(void){
+int main(int argc, char *argv[]) {
+
+	if(argc<2){
+		printf("No file provided %d\n", argc);
+		exit(-1);
+	}
 
 	const int screenWidth = 800;
 	const int screenHeight = 450;
@@ -58,13 +68,15 @@ int main(void){
 
 	//Model model = LoadModel("bunny.obj");
 	//Model model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
-	Mesh model_mesh = load_stl("resources/test.stl");
+	Mesh model_mesh = load_stl(argv[2]);
 	Model model = LoadModelFromMesh(model_mesh);
 	model.transform = MatrixMultiply(model.transform, MatrixRotateX(DEG2RAD*90));
 	model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
 	model.materials[0].shader = shader;
 
 	float model_scale = 0.10f;
+
+	parse_gcode(argv[1]);
 
 
 	while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -86,6 +98,7 @@ int main(void){
 
 		BeginMode3D(camera);
 
+		parse_gcode(argv[1]);
 		DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, model_scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, model_scale, BLACK);   // Draw 3d model with texture
 
@@ -207,4 +220,97 @@ void CustomUpdateCamera(Camera *camera){
 	camera->position.y = -sinf(angle.y)*targetDistance + camera->target.y;
 	camera->position.z = -cosf(angle.x)*targetDistance*cosf(angle.y) + camera->target.z;
 
+}
+
+void parse_gcode(char *gcode_file){
+
+	printf("Parsing Gcode\n");
+
+	FILE *g = fopen(gcode_file, "r");
+	if(g == NULL){
+		printf("Gcode file: \"%s\" does not exist!", gcode_file);
+		exit(-1);
+	}
+
+	char *line = (char *)malloc(1024);
+
+	Vector3 last_position = {0,0,0};
+	Vector3 l_end;
+	Color l_color;
+
+	bool absolute = true;
+	
+	while(1){	//go through all the lines
+		
+
+		fgets(line, 1023, g);	//read line
+		
+		if(feof(g)){
+			break;
+		}
+
+		char *end = strchr(line, ';');	//find end of gcode command
+		*end = '\0';	//terminate string there
+
+		line = strchr(line, 'G');
+		while(line != NULL){		//interpret all gcode command in line
+
+			int cmd = strtol(line+1, &line, 10);
+		
+			switch(cmd){
+			case 90:	//absolute mode
+				absolute = true;
+				break;
+			case 91:	//incremental mode
+				absolute = false;
+				break;
+			case 0:		//rapid
+				l_color = RED;	
+				break;
+			case 1:		//feed
+				l_color = GREEN;	
+				break;
+			}
+
+			if(cmd > 2) {
+				line = strchr(line, 'G');
+				continue;	//go to top of loop
+			}
+
+			float x,y,z;	//get coordinates
+			char *x_pos = strchr(line, 'X');
+			char *y_pos = strchr(line, 'Y');
+			char *z_pos = strchr(line, 'Z');
+
+			//check if axis gets moved
+			if(x_pos != NULL) x = strtof(x_pos+1, NULL);
+			else x = last_position.x;
+			if(y_pos != NULL) y = strtof(y_pos+1, NULL);
+			else y = last_position.y;
+			if(z_pos != NULL) z = strtof(z_pos+1, NULL);
+			else z = last_position.z;
+
+			if(absolute){
+				l_end.x = x;
+				l_end.y = y;
+				l_end.z = z;
+			}
+			else{
+				l_end.x += x;
+				l_end.y += y;
+				l_end.z += z;
+			}
+
+			DrawLine3D(last_position, l_end, l_color);
+
+			last_position.x = l_end.x;
+			last_position.y = l_end.y;
+			last_position.z = l_end.z;
+
+			break;	//out of loop
+		}
+
+	}
+	fclose(g);
+	printf("Parsing Complete!\n");
 }
