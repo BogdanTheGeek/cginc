@@ -320,19 +320,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 
 		char *end = NULL;
 		end = strchr(line, ';');	//find end of gcode command
-
-		while(end == NULL && !feof(g)){
-			fgets(line, 1023, g);	//read line
-
-			end = strchr(line, ';');	//find end of gcode command
-		}
-
-		if(feof(g) || end == NULL){
-			printf("EOF Reached\n");
-			break;
-		}
-
-		*end = '\0';	//terminate string there
+		if(end != NULL) *end = '\0';	//terminate string there
 
 		char* c = strchr(line, 'G');
 		if(c != NULL) line = c;
@@ -362,7 +350,8 @@ int parse_gcode(char *gcode_file, Segment **output){
 			}
 
 			if(cmd == 91 || cmd == 90) {
-				line = strchr(line, 'G');
+				char *tmp = strchr(line, 'G');
+				if(tmp != NULL) line = tmp;
 				continue;	//go to top of loop
 			}
 
