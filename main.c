@@ -19,9 +19,11 @@
 
 //globals 
 Color main_color = {187, 35, 255, 255};
+float scale = 0.10f;
 
 //prototypes
 void CustomUpdateCamera(Camera *camera); 
+void DrawXYGrid(int slices, float spacing);
 void parse_gcode(char *gcode_file);
 
 int main(int argc, char *argv[]) {
@@ -38,13 +40,12 @@ int main(int argc, char *argv[]) {
 
 	// Define the camera to look into our 3d world
 	Camera3D camera = { 0 };
-	camera.position = (Vector3){ 0.0f, 10.0f, 10.0f };  // Camera position
+	camera.position = (Vector3){ 0.0f, -10.0f, 10.0f };  // Camera position
 	camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };      // Camera looking at point
 	camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
 	camera.fovy = 45.0f;                                // Camera field-of-view Y
 	camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
 
-	Vector3 cubePosition = { 0.0f, 0.0f, 0.0f };
 	SetCameraMode(camera, CAMERA_CUSTOM); // Set a first person camera mode
 	SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
 
@@ -70,11 +71,10 @@ int main(int argc, char *argv[]) {
 	//Model model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
 	Mesh model_mesh = load_stl(argv[2]);
 	Model model = LoadModelFromMesh(model_mesh);
-	model.transform = MatrixMultiply(model.transform, MatrixRotateX(DEG2RAD*90));
+	//model.transform = MatrixMultiply(model.transform, MatrixRotateX(DEG2RAD*90));
 	model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
 	model.materials[0].shader = shader;
 
-	float model_scale = 0.10f;
 
 	parse_gcode(argv[1]);
 
@@ -99,10 +99,10 @@ int main(int argc, char *argv[]) {
 		BeginMode3D(camera);
 
 		parse_gcode(argv[1]);
-		DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, model_scale, GRAY);   // Draw 3d model with texture
-		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, model_scale, BLACK);   // Draw 3d model with texture
+		DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
+		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
 
-		DrawGrid(10, 1.0f);
+		DrawXYGrid(20, 0.50f);
 
 		EndMode3D();
 
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 void CustomUpdateCamera(Camera *camera){
 
 	if(IsKeyPressed(KEY_HOME)){
-		camera->position = (Vector3){ 0.0f, 10.0f, 10.0f };  // Camera position
+		camera->position = (Vector3){ 0.0f, -10.0f, 10.0f };  // Camera position
 		camera->target = (Vector3){ 0.0f, 0.0f, 0.0f };      // Camera looking at point
 		camera->up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
 		return;
@@ -222,9 +222,41 @@ void CustomUpdateCamera(Camera *camera){
 
 }
 
+void DrawXYGrid(int slices, float spacing){
+    int halfSlices = slices/2;
+
+    rlCheckRenderBatchLimit((slices + 2)*4);
+
+    rlBegin(RL_LINES);
+        for (int i = -halfSlices; i <= halfSlices; i++)
+        {
+            if (i == 0)
+            {
+                rlColor3f(0.5f, 0.5f, 0.5f);
+                rlColor3f(0.5f, 0.5f, 0.5f);
+                rlColor3f(0.5f, 0.5f, 0.5f);
+                rlColor3f(0.5f, 0.5f, 0.5f);
+            }
+            else
+            {
+                rlColor3f(0.75f, 0.75f, 0.75f);
+                rlColor3f(0.75f, 0.75f, 0.75f);
+                rlColor3f(0.75f, 0.75f, 0.75f);
+                rlColor3f(0.75f, 0.75f, 0.75f);
+            }
+
+            rlVertex3f((float)i*spacing, (float)-halfSlices*spacing, 0.0f);
+            rlVertex3f((float)i*spacing, (float)halfSlices*spacing, 0.0f);
+
+            rlVertex3f((float)-halfSlices*spacing, (float)i*spacing, 0.0f);
+            rlVertex3f((float)halfSlices*spacing, (float)i*spacing, 0.0f);
+        }
+    rlEnd();
+}
+
 void parse_gcode(char *gcode_file){
 
-	printf("Parsing Gcode\n");
+	//printf("Parsing Gcode\n");
 
 	FILE *g = fopen(gcode_file, "r");
 	if(g == NULL){
@@ -283,11 +315,11 @@ void parse_gcode(char *gcode_file){
 			char *z_pos = strchr(line, 'Z');
 
 			//check if axis gets moved
-			if(x_pos != NULL) x = strtof(x_pos+1, NULL);
+			if(x_pos != NULL) x = strtof(x_pos+1, NULL)*scale;
 			else x = last_position.x;
-			if(y_pos != NULL) y = strtof(y_pos+1, NULL);
+			if(y_pos != NULL) y = strtof(y_pos+1, NULL)*scale;
 			else y = last_position.y;
-			if(z_pos != NULL) z = strtof(z_pos+1, NULL);
+			if(z_pos != NULL) z = strtof(z_pos+1, NULL)*scale;
 			else z = last_position.z;
 
 			if(absolute){
@@ -313,5 +345,5 @@ void parse_gcode(char *gcode_file){
 	}
 	fclose(g);
 	free(line);
-	printf("Parsing Complete!\n");
+	//printf("Parsing Complete!\n");
 }
