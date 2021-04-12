@@ -16,6 +16,12 @@
 #define DEBUG_MODE
 #include "settings.h"
 
+//structures
+typedef struct Segment{
+	Vector3 point;
+	Color color;
+}Segment;
+
 
 //globals 
 Color main_color = {187, 35, 255, 255};
@@ -24,7 +30,8 @@ float scale = 0.10f;
 //prototypes
 void CustomUpdateCamera(Camera *camera); 
 void DrawXYGrid(int slices, float spacing);
-void parse_gcode(char *gcode_file);
+int parse_gcode(char *gcode_file, Segment **output);
+void DrawGcodePath(Segment * seg, int len);
 
 int main(int argc, char *argv[]) {
 
@@ -76,7 +83,8 @@ int main(int argc, char *argv[]) {
 	model.materials[0].shader = shader;
 
 
-	parse_gcode(argv[1]);
+	Segment *path;
+	int path_len = parse_gcode(argv[1], &path);
 
 
 	while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -98,7 +106,8 @@ int main(int argc, char *argv[]) {
 
 		BeginMode3D(camera);
 
-		parse_gcode(argv[1]);
+		DrawGcodePath(path, path_len);
+
 		DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
 
@@ -111,6 +120,7 @@ int main(int argc, char *argv[]) {
 			EndDrawing();
 	}
 
+	free(path);
 	UnloadModel(model);  
 	UnloadTexture(texture);     // Unload the texture
 
@@ -254,15 +264,25 @@ void DrawXYGrid(int slices, float spacing){
     rlEnd();
 }
 
-void parse_gcode(char *gcode_file){
+int parse_gcode(char *gcode_file, Segment **output){
 
-	//printf("Parsing Gcode\n");
+	printf("Parsing Gcode\n");
 
 	FILE *g = fopen(gcode_file, "r");
 	if(g == NULL){
 		printf("Gcode file: \"%s\" does not exist!", gcode_file);
 		exit(-1);
 	}
+
+	int seg_block = 1024;
+	int seg_index = 0;
+
+	Segment * segments = (Segment *)malloc(sizeof(Segment)*seg_block);
+
+	segments[seg_index].point.x = 0;
+	segments[seg_index].point.y = 0;
+	segments[seg_index].point.z = 0;
+	segments[seg_index].color = BLACK;
 
 	char *line = (char *)malloc(1024);
 
@@ -333,7 +353,21 @@ void parse_gcode(char *gcode_file){
 				l_end.z += z;
 			}
 
-			DrawLine3D(last_position, l_end, l_color);
+			if(seg_index == seg_block-1){
+				seg_block += 1024;
+				segments = (Segment *)realloc(segments, sizeof(Segment)*seg_block);
+				if(segments == NULL){
+					perror("Could not allocate more space for segments!");
+					exit(-1);
+				}
+			}
+
+			//DrawLine3D(last_position, l_end, l_color);
+			seg_index++;
+			segments[seg_index].point.x = l_end.x;
+			segments[seg_index].point.y = l_end.y;
+			segments[seg_index].point.z = l_end.z;
+			segments[seg_index].color = l_color;
 
 			last_position.x = l_end.x;
 			last_position.y = l_end.y;
@@ -345,5 +379,16 @@ void parse_gcode(char *gcode_file){
 	}
 	fclose(g);
 	free(line);
-	//printf("Parsing Complete!\n");
+
+	*output = segments;
+
+	printf("Parsing Complete!\n");
+	return seg_index;
+}
+
+void DrawGcodePath(Segment * seg, int len){
+	for(int i=1; i<len; i++){
+		//printf("%d: %f, %f, %f\n", i, seg[i].point.x, seg[i].point.y, seg[i].point.z);
+		DrawLine3D(seg[i-1].point, seg[i].point, seg[i].color);
+	}
 }
