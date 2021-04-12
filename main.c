@@ -308,18 +308,36 @@ int parse_gcode(char *gcode_file, Segment **output){
 	while(1){	//go through all the lines
 		
 
-		fgets(line, 1023, g);	//read line
+		if(fgets(line, 1023, g) == NULL){
+			printf("No string read!\n");
+			break;	//read line
+		}
 		
 		if(feof(g)){
+			printf("EOF Reached\n");
 			break;
 		}
 
-		char *end = strchr(line, ';');	//find end of gcode command
+		char *end = NULL;
+		end = strchr(line, ';');	//find end of gcode command
+
+		while(end == NULL && !feof(g)){
+			fgets(line, 1023, g);	//read line
+
+			end = strchr(line, ';');	//find end of gcode command
+		}
+
+		if(feof(g) || end == NULL){
+			printf("EOF Reached\n");
+			break;
+		}
+
 		*end = '\0';	//terminate string there
 
-		line = strchr(line, 'G');
-		while(line != NULL){		//interpret all gcode command in line
+		char* c = strchr(line, 'G');
+		if(c != NULL) line = c;
 
+		while(line != NULL){		//interpret all gcode command in line
 			int cmd = strtol(line+1, &line, 10);
 		
 			switch(cmd){
@@ -335,9 +353,15 @@ int parse_gcode(char *gcode_file, Segment **output){
 			case 1:		//feed
 				l_color = GREEN;	
 				break;
+			case 2:	//clockwise arc
+				break;
+			case 3:	//counterclockwise arc
+				break;
+			default:
+				break;
 			}
 
-			if(cmd > 2) {
+			if(cmd == 91 || cmd == 90) {
 				line = strchr(line, 'G');
 				continue;	//go to top of loop
 			}
@@ -346,6 +370,10 @@ int parse_gcode(char *gcode_file, Segment **output){
 			char *x_pos = strchr(line, 'X');
 			char *y_pos = strchr(line, 'Y');
 			char *z_pos = strchr(line, 'Z');
+			char *i_pos = strchr(line, 'I');
+			char *j_pos = strchr(line, 'J');
+			char *k_pos = strchr(line, 'K');
+			char *r_pos = strchr(line, 'R');
 
 			//check if axis gets moved
 			if(x_pos != NULL) x = strtof(x_pos+1, NULL)*scale;
@@ -375,6 +403,11 @@ int parse_gcode(char *gcode_file, Segment **output){
 				}
 			}
 
+			//if(r_pos != NULL){	//radius arc
+				//char r = strtof(r_pos+1, NULL)*scale;
+				//DrawCircle3D(Vector3 center, float radius, Vector3 rotationAxis, float rotationAngle, Color color);
+			//}
+
 			//DrawLine3D(last_position, l_end, l_color);
 			seg_index++;
 			segments[seg_index].point.x = l_end.x;
@@ -391,11 +424,10 @@ int parse_gcode(char *gcode_file, Segment **output){
 
 	}
 	fclose(g);
-	free(line);
 
 	*output = segments;
 
-	printf("Parsing Complete!\n");
+	printf("Parsing Complete, %d points found!\n", seg_index);
 	return seg_index;
 }
 
