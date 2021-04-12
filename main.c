@@ -40,6 +40,14 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 	}
 
+	char * gcode_file = NULL;
+	char * model_file = NULL;
+
+	for(int i=1; i<argc; i++){
+		if(strstr(argv[i], ".stl")) model_file = argv[i];
+		if(strstr(argv[i], ".nc") || strstr(argv[i], ".gc") || strstr(argv[i], ".ngc") || strstr(argv[i], ".gcode")) gcode_file = argv[i];
+	}
+
 	const int screenWidth = 800;
 	const int screenHeight = 450;
 
@@ -76,15 +84,18 @@ int main(int argc, char *argv[]) {
 
 	//Model model = LoadModel("bunny.obj");
 	//Model model = LoadModelFromMesh(GenMeshCube(1.0f, 1.0f, 1.0f));
-	Mesh model_mesh = load_stl(argv[2]);
-	Model model = LoadModelFromMesh(model_mesh);
-	//model.transform = MatrixMultiply(model.transform, MatrixRotateX(DEG2RAD*90));
-	model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
-	model.materials[0].shader = shader;
+	Model model;
+	if(model_file){
+		Mesh model_mesh = load_stl(model_file);
+		model = LoadModelFromMesh(model_mesh);
+		//model.transform = MatrixMultiply(model.transform, MatrixRotateX(DEG2RAD*90));
+		model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture;
+		model.materials[0].shader = shader;
+	}
 
 
 	Segment *path;
-	int path_len = parse_gcode(argv[1], &path);
+	int path_len = parse_gcode(gcode_file, &path);
 
 
 	while (!WindowShouldClose())    // Detect window close button or ESC key
@@ -108,7 +119,7 @@ int main(int argc, char *argv[]) {
 
 		DrawGcodePath(path, path_len);
 
-		DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
+		if(model_file)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
 
 		DrawXYGrid(20, 0.50f);
@@ -121,8 +132,10 @@ int main(int argc, char *argv[]) {
 	}
 
 	free(path);
-	UnloadModel(model);  
-	UnloadTexture(texture);     // Unload the texture
+	if(model_file){
+		UnloadModel(model);
+		UnloadTexture(texture);
+	}
 
 	CloseWindow();        // Close window and OpenGL context
 
