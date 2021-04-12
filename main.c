@@ -312,5 +312,6 @@ void parse_gcode(char *gcode_file){
 
 	}
 	fclose(g);
+	free(line);
 	printf("Parsing Complete!\n");
 }
