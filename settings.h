@@ -5,6 +5,11 @@
 #define DEBUG_SHOW(X)
 #endif
 
+#if defined(PLATFORM_DESKTOP)
+    #define GLSL_VERSION            330
+#else   // PLATFORM_RPI, PLATFORM_ANDROID, PLATFORM_WEB
+    #define GLSL_VERSION            100
+#endif
 
 #define CAMERA_MOUSE_SCROLL_SENSITIVITY                 1.5f
 #define CAMERA_FREE_MOUSE_SENSITIVITY                   0.01f

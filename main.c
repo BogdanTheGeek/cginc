@@ -2,26 +2,18 @@
 #include <math.h>
 #include <string.h>
 #include "raymath.h"
-
 #define RLIGHTS_IMPLEMENTATION
 #include "rlights.h"
-
-#if defined(PLATFORM_DESKTOP)
-    #define GLSL_VERSION            330
-#else   // PLATFORM_RPI, PLATFORM_ANDROID, PLATFORM_WEB
-    #define GLSL_VERSION            100
-#endif
 #include "stl_loader.h"
-
 #define DEBUG_MODE
 #include "settings.h"
+#include "util.h"	// this should be the last include
 
 //structures
 typedef struct Segment{
 	Vector3 point;
 	Color color;
 }Segment;
-
 
 //globals 
 Color main_color = {187, 35, 255, 255};
@@ -50,6 +42,11 @@ int main(int argc, char *argv[]) {
 
 	const int screenWidth = 800;
 	const int screenHeight = 450;
+
+	SetConfigFlags(
+			FLAG_WINDOW_RESIZABLE
+			//| FLAG_MSAA_4X_HINT  // Enable Multi Sampling Anti Aliasing 4x (if available)
+			);
 
 	InitWindow(screenWidth, screenHeight, "CGinC");
 
@@ -117,7 +114,9 @@ int main(int argc, char *argv[]) {
 
 		BeginMode3D(camera);
 
-		DrawGcodePath(path, path_len);
+		//DrawGcodePath(path, path_len);
+		free(path);
+		parse_gcode(gcode_file, &path);
 
 		if(model_file)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
@@ -142,141 +141,6 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-
-void CustomUpdateCamera(Camera *camera){
-
-	if(IsKeyPressed(KEY_HOME)){
-		camera->position = (Vector3){ 0.0f, -10.0f, 10.0f };  // Camera position
-		camera->target = (Vector3){ 0.0f, 0.0f, 0.0f };      // Camera looking at point
-		camera->up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
-		return;
-	}
-
-	static Vector2 previousMousePosition = { 0.0f, 0.0f };
-
-	// Mouse movement detection
-	Vector2 mousePositionDelta = { 0.0f, 0.0f };
-	Vector2 mousePosition = GetMousePosition();
-	float mouseWheelMove = GetMouseWheelMove();
-
-	mousePositionDelta.x = mousePosition.x - previousMousePosition.x;
-	mousePositionDelta.y = mousePosition.y - previousMousePosition.y;
-
-	previousMousePosition = mousePosition;
-
-	float dx = camera->target.x - camera->position.x;
-	float dy = camera->target.y - camera->position.y;
-	float dz = camera->target.z - camera->position.z;
-
-	float targetDistance = sqrtf(dx*dx + dy*dy + dz*dz);   // Distance to target
-
-	// Camera angle calculation
-	Vector2 angle;
-	angle.x = atan2f(dx, dz);                        // Camera angle in plane XZ (0 aligned with Z, move positive CCW)
-	angle.y = atan2f(dy, sqrtf(dx*dx + dz*dz));      // Camera angle in plane XY (0 aligned with X, move positive CW)
-
-	float playerEyesPosition = camera->position.y;          // Init player eyes position to camera Y position
-
-	// Camera zoom
-	if ((targetDistance < CAMERA_FREE_DISTANCE_MAX_CLAMP) && (mouseWheelMove < 0))
-	{
-		targetDistance -= (mouseWheelMove*CAMERA_MOUSE_SCROLL_SENSITIVITY);
-		if (targetDistance > CAMERA_FREE_DISTANCE_MAX_CLAMP) targetDistance = CAMERA_FREE_DISTANCE_MAX_CLAMP;
-	}
-
-	// Camera looking down
-	else if ((camera->position.y > camera->target.y) && (targetDistance == CAMERA_FREE_DISTANCE_MAX_CLAMP) && (mouseWheelMove < 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-	}
-	else if ((camera->position.y > camera->target.y) && (camera->target.y >= 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-	}
-	else if ((camera->position.y > camera->target.y) && (camera->target.y < 0) && (mouseWheelMove > 0)){
-		targetDistance -= (mouseWheelMove*CAMERA_MOUSE_SCROLL_SENSITIVITY);
-		if (targetDistance < CAMERA_FREE_DISTANCE_MIN_CLAMP) targetDistance = CAMERA_FREE_DISTANCE_MIN_CLAMP;
-	}
-
-
-	// Camera looking up
-	else if ((camera->position.y < camera->target.y) && (targetDistance == CAMERA_FREE_DISTANCE_MAX_CLAMP) && (mouseWheelMove < 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-	}
-	else if ((camera->position.y < camera->target.y) && (camera->target.y <= 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-	}
-	else if ((camera->position.y < camera->target.y) && (camera->target.y > 0) && (mouseWheelMove > 0)){
-		targetDistance -= (mouseWheelMove*CAMERA_MOUSE_SCROLL_SENSITIVITY);
-		if (targetDistance < CAMERA_FREE_DISTANCE_MIN_CLAMP) targetDistance = CAMERA_FREE_DISTANCE_MIN_CLAMP;
-	}
-
-
-	// Input keys checks
-	if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON))
-	{
-			// Camera panning
-			camera->target.x += ((mousePositionDelta.x*CAMERA_FREE_MOUSE_SENSITIVITY)*cosf(angle.x) + (mousePositionDelta.y*CAMERA_FREE_MOUSE_SENSITIVITY)*sinf(angle.x)*sinf(angle.y))*(targetDistance/CAMERA_FREE_PANNING_DIVIDER);
-			camera->target.y += ((mousePositionDelta.y*CAMERA_FREE_MOUSE_SENSITIVITY)*cosf(angle.y))*(targetDistance/CAMERA_FREE_PANNING_DIVIDER);
-			camera->target.z += ((mousePositionDelta.x*-CAMERA_FREE_MOUSE_SENSITIVITY)*sinf(angle.x) + (mousePositionDelta.y*CAMERA_FREE_MOUSE_SENSITIVITY)*cosf(angle.x)*sinf(angle.y))*(targetDistance/CAMERA_FREE_PANNING_DIVIDER);
-	}
-	else if (IsMouseButtonDown(MOUSE_LEFT_BUTTON))     // Alternative key behaviour
-	{
-			// Camera rotation
-			angle.x += mousePositionDelta.x*-CAMERA_FREE_MOUSE_SENSITIVITY;
-			angle.y += mousePositionDelta.y*-CAMERA_FREE_MOUSE_SENSITIVITY;
-
-			// Angle clamp
-			if (angle.y > CAMERA_FREE_MIN_CLAMP*DEG2RAD) angle.y = CAMERA_FREE_MIN_CLAMP*DEG2RAD;
-			else if (angle.y < CAMERA_FREE_MAX_CLAMP*DEG2RAD) angle.y = CAMERA_FREE_MAX_CLAMP*DEG2RAD;
-
-	}
-
-	// Update camera position with changes
-	camera->position.x = -sinf(angle.x)*targetDistance*cosf(angle.y) + camera->target.x;
-	camera->position.y = -sinf(angle.y)*targetDistance + camera->target.y;
-	camera->position.z = -cosf(angle.x)*targetDistance*cosf(angle.y) + camera->target.z;
-
-}
-
-void DrawXYGrid(int slices, float spacing){
-    int halfSlices = slices/2;
-
-    rlCheckRenderBatchLimit((slices + 2)*4);
-
-    rlBegin(RL_LINES);
-        for (int i = -halfSlices; i <= halfSlices; i++)
-        {
-            if (i == 0)
-            {
-                rlColor3f(0.5f, 0.5f, 0.5f);
-                rlColor3f(0.5f, 0.5f, 0.5f);
-                rlColor3f(0.5f, 0.5f, 0.5f);
-                rlColor3f(0.5f, 0.5f, 0.5f);
-            }
-            else
-            {
-                rlColor3f(0.75f, 0.75f, 0.75f);
-                rlColor3f(0.75f, 0.75f, 0.75f);
-                rlColor3f(0.75f, 0.75f, 0.75f);
-                rlColor3f(0.75f, 0.75f, 0.75f);
-            }
-
-            rlVertex3f((float)i*spacing, (float)-halfSlices*spacing, 0.0f);
-            rlVertex3f((float)i*spacing, (float)halfSlices*spacing, 0.0f);
-
-            rlVertex3f((float)-halfSlices*spacing, (float)i*spacing, 0.0f);
-            rlVertex3f((float)halfSlices*spacing, (float)i*spacing, 0.0f);
-        }
-    rlEnd();
-}
-
 int parse_gcode(char *gcode_file, Segment **output){
 
 	printf("Parsing Gcode\n");
@@ -297,10 +161,11 @@ int parse_gcode(char *gcode_file, Segment **output){
 	segments[seg_index].point.z = 0;
 	segments[seg_index].color = BLACK;
 
-	char *line = (char *)malloc(1024);
+	char *line, *line_alloc = (char *)malloc(1024);
+	line = line_alloc;
 
 	Vector3 last_position = {0,0,0};
-	Vector3 l_end;
+	Vector3 l_end = {0,0,0};
 	Color l_color;
 
 	bool absolute = true;
@@ -342,8 +207,8 @@ int parse_gcode(char *gcode_file, Segment **output){
 				l_color = GREEN;	
 				break;
 			case 2:	//clockwise arc
-				break;
 			case 3:	//counterclockwise arc
+				l_color = BLUE
 				break;
 			default:
 				break;
@@ -366,11 +231,16 @@ int parse_gcode(char *gcode_file, Segment **output){
 
 			//check if axis gets moved
 			if(x_pos != NULL) x = strtof(x_pos+1, NULL)*scale;
-			else x = last_position.x;
+			else if(cmd != 2 && cmd != 3) x = last_position.x;
+			else x = 0;
+
 			if(y_pos != NULL) y = strtof(y_pos+1, NULL)*scale;
-			else y = last_position.y;
+			else if(cmd != 2 && cmd != 3) y = last_position.y;
+			else y = 0;
+
 			if(z_pos != NULL) z = strtof(z_pos+1, NULL)*scale;
-			else z = last_position.z;
+			else if(cmd != 2 && cmd != 3) z = last_position.z;
+			else z = 0;
 
 			if(absolute){
 				l_end.x = x;
@@ -392,12 +262,97 @@ int parse_gcode(char *gcode_file, Segment **output){
 				}
 			}
 
-			//if(r_pos != NULL){	//radius arc
-				//char r = strtof(r_pos+1, NULL)*scale;
-				//DrawCircle3D(Vector3 center, float radius, Vector3 rotationAxis, float rotationAngle, Color color);
-			//}
+			if(cmd == 2 || cmd == 3){	//arc
 
-			//DrawLine3D(last_position, l_end, l_color);
+				Vector3 center;
+
+				float i,j,k;
+
+				if(i_pos != NULL) i = strtof(i_pos+1, NULL)*scale;
+				else i = 0;
+				if(j_pos != NULL) j = strtof(j_pos+1, NULL)*scale;
+				else j = 0;
+				if(k_pos != NULL) k = strtof(k_pos+1, NULL)*scale;
+				else k = 0;
+
+				if(absolute){
+					center.x = i;
+					center.y = j;
+					center.z = k;
+				}
+				else{
+					center.x = last_position.x + i;
+					center.y = last_position.y + j;
+					center.z = last_position.z + k;
+				}
+
+				if(z_pos == NULL) l_end.z = last_position.z;
+
+				//calculate the vectors to the center
+				Vector3 v, u;
+				v.x = last_position.x - center.x;
+				v.y = last_position.y - center.y;
+				v.z = last_position.z - center.z;
+				printVector3("v", v);
+
+				u.x = l_end.x - center.x;
+				u.y = l_end.y - center.y;
+				u.z = l_end.z - center.z;
+				printVector3("u", u);
+
+				if(l_end.z == last_position.z) u.z = 0;
+				float radius;
+				if(r_pos != NULL){
+					radius = strtof(r_pos+1, NULL)*scale;
+				}
+				else {
+					//calculate the radius
+					//radius = sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+					radius = 1.0f / Q_rsqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+				}
+
+
+				float rotationAngle;	//this angle can be calculated from the definition of the vector dot product
+
+				if(l_end.x == last_position.x && l_end.y == last_position.y){
+					//if the end point is the same as the starting point assume full circle
+					rotationAngle = 360;
+				}
+				else {
+					float v_dot_u = v.x*u.x + v.y*u.y + v.z*u.z;
+					//For the gcode to be valid, the magnitudes of both vectors should be equal, or close enough
+					//I will check it for the user
+					//float mag_v = radius;	 //the radius is the first magnitude
+					float mag_v = 1.0f / Q_rsqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+
+					//float mag_u  = sqrt(u.x*u.x + u.y*u.y + u.z*u.z);
+					float mag_u  = 1.0f / Q_rsqrt(u.x*u.x + u.y*u.y + u.z*u.z);
+
+					if(fast_abs(mag_v - mag_u) > 0.01) printf("Something's fishy about that arc, check it again\n");
+
+					//finally we can calculate the angle
+					rotationAngle = RAD2DEG*acos(v_dot_u / (mag_v * mag_u));
+				}
+
+				//use the angle of the vector to x axis to offset the start of the section 
+				float offsetAngle = atan2(v.x, v.y)*RAD2DEG -180;
+
+				if(cmd == 2){
+					rotationAngle = -rotationAngle;	//use negative angle to rotate backwards
+					offsetAngle = offsetAngle+180;	//this now needs to be also offset
+				}
+
+				printf("X%f Y%f Z%f I%f J%f K%f R%f A%f O%f\n", l_end.x, l_end.y, l_end.z, center.x, center.y, center.z, radius, rotationAngle, offsetAngle);
+				
+				printVector3("last_position", last_position);
+				printVector3("l_end", l_end);
+				printVector3("center", center);
+				DrawCircleSector3D(center, radius, rotationAngle, offsetAngle, u.z, l_color);
+			}
+			else {
+				DrawLine3D(last_position, l_end, l_color);
+			}
+
 			seg_index++;
 			segments[seg_index].point.x = l_end.x;
 			segments[seg_index].point.y = l_end.y;
@@ -413,6 +368,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 
 	}
 	fclose(g);
+	free(line_alloc);
 
 	*output = segments;
 
