@@ -187,8 +187,10 @@ int parse_gcode(char *gcode_file, Segment **output){
 		end = strchr(line, ';');	//find end of gcode command
 		if(end != NULL) *end = '\0';	//terminate string there
 
-		char* c = strchr(line, 'G');
-		if(c != NULL) line = c;
+		char* c = strchr(line, 'G');	//look for g command in line
+		if(c != NULL) line = c;	//start intepreting from there
+		else continue;	//or abort/ nothing for us to draw
+
 
 		while(line != NULL){		//interpret all gcode command in line
 			int cmd = strtol(line+1, &line, 10);
@@ -208,13 +210,13 @@ int parse_gcode(char *gcode_file, Segment **output){
 				break;
 			case 2:	//clockwise arc
 			case 3:	//counterclockwise arc
-				l_color = BLUE
+				l_color = BLUE;
 				break;
 			default:
 				break;
 			}
 
-			if(cmd == 91 || cmd == 90) {
+			if(cmd == 91 || cmd == 90) {	//these just change the coordinate system
 				char *tmp = strchr(line, 'G');
 				if(tmp != NULL) line = tmp;
 				continue;	//go to top of loop
@@ -230,9 +232,9 @@ int parse_gcode(char *gcode_file, Segment **output){
 			char *r_pos = strchr(line, 'R');
 
 			//check if axis gets moved
-			if(x_pos != NULL) x = strtof(x_pos+1, NULL)*scale;
-			else if(cmd != 2 && cmd != 3) x = last_position.x;
-			else x = 0;
+			if(x_pos != NULL) x = strtof(x_pos+1, NULL)*scale;	//check if value present and get it
+			else if(cmd != 2 && cmd != 3) x = last_position.x;	//if its not and we are not in arc
+			else x = 0;	//if its not and we are in arc
 
 			if(y_pos != NULL) y = strtof(y_pos+1, NULL)*scale;
 			else if(cmd != 2 && cmd != 3) y = last_position.y;
@@ -242,17 +244,18 @@ int parse_gcode(char *gcode_file, Segment **output){
 			else if(cmd != 2 && cmd != 3) z = last_position.z;
 			else z = 0;
 
-			if(absolute){
+			if(absolute){	//this means we go to x
 				l_end.x = x;
 				l_end.y = y;
 				l_end.z = z;
 			}
-			else{
+			else{		//this means we go x amount from where we are
 				l_end.x += x;
 				l_end.y += y;
 				l_end.z += z;
 			}
 
+			//allocate more segments if needed
 			if(seg_index == seg_block-1){
 				seg_block += 1024;
 				segments = (Segment *)realloc(segments, sizeof(Segment)*seg_block);
@@ -288,17 +291,17 @@ int parse_gcode(char *gcode_file, Segment **output){
 
 				if(z_pos == NULL) l_end.z = last_position.z;
 
-				//calculate the vectors to the center
+				//calculate the vectors from the center
 				Vector3 v, u;
 				v.x = last_position.x - center.x;
 				v.y = last_position.y - center.y;
 				v.z = last_position.z - center.z;
-				printVector3("v", v);
+				//printVector3("v", v);
 
 				u.x = l_end.x - center.x;
 				u.y = l_end.y - center.y;
 				u.z = l_end.z - center.z;
-				printVector3("u", u);
+				//printVector3("u", u);
 
 				if(l_end.z == last_position.z) u.z = 0;
 				float radius;
@@ -334,7 +337,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 					rotationAngle = RAD2DEG*acos(v_dot_u / (mag_v * mag_u));
 				}
 
-				//use the angle of the vector to x axis to offset the start of the section 
+				//use the angle of the vector to x axis to offset the start of the section
 				float offsetAngle = atan2(v.x, v.y)*RAD2DEG -180;
 
 				if(cmd == 2){
@@ -342,11 +345,11 @@ int parse_gcode(char *gcode_file, Segment **output){
 					offsetAngle = offsetAngle+180;	//this now needs to be also offset
 				}
 
-				printf("X%f Y%f Z%f I%f J%f K%f R%f A%f O%f\n", l_end.x, l_end.y, l_end.z, center.x, center.y, center.z, radius, rotationAngle, offsetAngle);
-				
-				printVector3("last_position", last_position);
-				printVector3("l_end", l_end);
-				printVector3("center", center);
+				//printf("X%f Y%f Z%f I%f J%f K%f R%f A%f O%f\n", l_end.x, l_end.y, l_end.z, center.x, center.y, center.z, radius, rotationAngle, offsetAngle);
+
+				//printVector3("last_position", last_position);
+				//printVector3("l_end", l_end);
+				//printVector3("center", center);
 				DrawCircleSector3D(center, radius, rotationAngle, offsetAngle, u.z, l_color);
 			}
 			else {

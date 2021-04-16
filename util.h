@@ -173,8 +173,8 @@ void DrawCircleSector3D(Vector3 center, float radius, float rotationAngle, float
             {
                 rlColor4ub(color.r, color.g, color.b, color.a);
 
-                rlVertex3f(sinf(DEG2RAD*i)*radius, -cosf(DEG2RAD*i)*radius, (i - offsetAngle)*k/360.0);
-                rlVertex3f(sinf(DEG2RAD*(i+5))*radius, -cosf(DEG2RAD*(i+5))*radius, (i+5 - offsetAngle)*k/360.0);
+                rlVertex3f(sinf(DEG2RAD*i)*radius, -cosf(DEG2RAD*i)*radius, (i + offsetAngle)*k/360.0);
+                rlVertex3f(sinf(DEG2RAD*(i+5))*radius, -cosf(DEG2RAD*(i+5))*radius, (i+5 + offsetAngle)*k/360.0);
             }
 					}
 					else{
@@ -182,8 +182,8 @@ void DrawCircleSector3D(Vector3 center, float radius, float rotationAngle, float
             {
                 rlColor4ub(color.r, color.g, color.b, color.a);
 
-                rlVertex3f(sinf(DEG2RAD*(i-5))*radius, -cosf(DEG2RAD*(i-5))*radius, (i-5 - offsetAngle)*k/360.0);
-                rlVertex3f(sinf(DEG2RAD*i)*radius, -cosf(DEG2RAD*i)*radius, (i - offsetAngle)*k/360.0);
+                rlVertex3f(sinf(DEG2RAD*(i-5))*radius, -cosf(DEG2RAD*(i-5))*radius, (i-5 + offsetAngle)*k/360.0);
+                rlVertex3f(sinf(DEG2RAD*i)*radius, -cosf(DEG2RAD*i)*radius, (i + offsetAngle)*k/360.0);
             }
 					}
         rlEnd();
