@@ -12,8 +12,23 @@ Everything is written in C, with the help of [raylib](https://www.raylib.com/), 
 # Installation
 This is still in the early days of development, but I am planning on releasing binaries.
 
+# Compile
+To compile make sure you have downloaded, compiled and installed raylib with default parameter.
+
+Run:
+```
+./compile.sh
+```
+
 # Running
-To run simply pass the path to either a gcode file(.nc, .ngc, .gcode, .gc) and/or a binary stl file(OpenSCAD only does ASCII stl's do you will need to convert it to binary format)
+To run simply pass the path to either a gcode file(.nc, .ngc, .gcode, .gc) and/or a binary stl file(OpenSCAD only does ASCII stl's do you will need to convert it to binary format):
 ```
 ./cginc test.nc resource/test.stl
 ```
+Use `Left Mouse` button to orbit and `Right Mouse` button to pan.
+Pressing `Home` on the keyboard returns you to home location.
+
+
+# Thanks to:
+- raysan5 for [raylib](https://www.raylib.com/)
+- WEREMSOFT for the [stl_loader](https://github.com/WEREMSOFT/stl-loader-for-raylib)
