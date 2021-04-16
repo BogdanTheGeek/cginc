@@ -278,15 +278,44 @@ int parse_gcode(char *gcode_file, Segment **output){
 				if(k_pos != NULL) k = strtof(k_pos+1, NULL)*scale;
 				else k = 0;
 
-				if(absolute){
-					center.x = i;
-					center.y = j;
-					center.z = k;
+
+				//if(l_end.z == last_position.z) u.z = 0;
+				float radius;
+				if(r_pos != NULL){
+					radius = strtof(r_pos+1, NULL)*scale;
+					//trying to implement radius mode
+					//for any angle between the start of the arc and the end of it
+					//the center will lie on the tangent
+					float q = sqrt((l_end.x-last_position.x)*(l_end.x-last_position.x) + (l_end.y-last_position.y)*(l_end.y-last_position.y));
+
+					float y3 = (last_position.y+l_end.y)/2;
+					float x3 = (last_position.x+l_end.x)/2;
+
+					float basex = sqrt( radius*radius - q*q/4.0 ) * (last_position.y-l_end.y)/q; //calculate once
+					float basey = sqrt( radius*radius - q*q/4.0 ) * (l_end.x-last_position.x)/q; //calculate once
+
+					if(cmd == 3){
+						center.x = x3 + basex; //center x of circle 1
+						center.y = y3 + basey; //center y of circle 1
+					}
+					else {
+						center.x = x3 - basex; //center x of circle 2
+						center.y = y3 - basey; //center y of circle 2
+					}
+
+					center.z = last_position.z;
 				}
 				else{
-					center.x = last_position.x + i;
-					center.y = last_position.y + j;
-					center.z = last_position.z + k;
+					if(absolute){
+						center.x = i;
+						center.y = j;
+						center.z = k;
+					}
+					else{
+						center.x = last_position.x + i;
+						center.y = last_position.y + j;
+						center.z = last_position.z + k;
+					}
 				}
 
 				if(z_pos == NULL) l_end.z = last_position.z;
@@ -303,17 +332,11 @@ int parse_gcode(char *gcode_file, Segment **output){
 				u.z = l_end.z - center.z;
 				//printVector3("u", u);
 
-				if(l_end.z == last_position.z) u.z = 0;
-				float radius;
-				if(r_pos != NULL){
-					radius = strtof(r_pos+1, NULL)*scale;
-				}
-				else {
+				if(r_pos == NULL){
 					//calculate the radius
 					//radius = sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 					radius = 1.0f / Q_rsqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 				}
-
 
 				float rotationAngle;	//this angle can be calculated from the definition of the vector dot product
 
