@@ -26,8 +26,6 @@ Color main_color = {187, 35, 255, 255};
 float scale = 0.10f;
 
 //prototypes
-void CustomUpdateCamera(Camera *camera); 
-void DrawXYGrid(int slices, float spacing);
 int parse_gcode(char *gcode_file, Segment **output);
 void DrawGcodePath(Segment * seg, int len);
 
@@ -127,7 +125,7 @@ int main(int argc, char *argv[]) {
 		if(model_file)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
 
-		DrawXYGrid(20, 0.50f);
+		DrawXYGrid();
 
 		EndMode3D();
 

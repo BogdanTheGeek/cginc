@@ -127,15 +127,15 @@ void CustomUpdateCamera(Camera *camera){
 }
 
 //this draws the grid in the xy plane
-void DrawXYGrid(int slices, float spacing){
-    int halfSlices = slices/2;
+void DrawXYGrid(){
+    int half = 100;
 
-    rlCheckRenderBatchLimit((slices + 2)*4);
+    rlCheckRenderBatchLimit((half + 2)*4);
 
     rlBegin(RL_LINES);
-        for (int i = -halfSlices; i <= halfSlices; i++)
+        for (int i = -half; i <= half; i++)
         {
-            if (i == 0)
+            if (i % 10 == 0)
             {
                 rlColor3f(0.5f, 0.5f, 0.5f);
                 rlColor3f(0.5f, 0.5f, 0.5f);
@@ -144,17 +144,18 @@ void DrawXYGrid(int slices, float spacing){
             }
             else
             {
-                rlColor3f(0.75f, 0.75f, 0.75f);
-                rlColor3f(0.75f, 0.75f, 0.75f);
-                rlColor3f(0.75f, 0.75f, 0.75f);
-                rlColor3f(0.75f, 0.75f, 0.75f);
+                rlColor3f(0.9, 0.9, 0.9);
+                rlColor3f(0.9, 0.9, 0.9);
+                rlColor3f(0.9, 0.9, 0.9);
+                rlColor3f(0.9, 0.9, 0.9);
             }
 
-            rlVertex3f((float)i*spacing, (float)-halfSlices*spacing, 0.0f);
-            rlVertex3f((float)i*spacing, (float)halfSlices*spacing, 0.0f);
-
-            rlVertex3f((float)-halfSlices*spacing, (float)i*spacing, 0.0f);
-            rlVertex3f((float)halfSlices*spacing, (float)i*spacing, 0.0f);
+						//vertical
+            rlVertex3f((float)i*0.1f, (float)-half*0.1f, 0.0f);
+            rlVertex3f((float)i*0.1f, (float)half*0.1f, 0.0f);
+						//horizontal
+            rlVertex3f((float)-half*0.1f, (float)i*0.1f, 0.0f);
+            rlVertex3f((float)half*0.1f, (float)i*0.1f, 0.0f);
         }
     rlEnd();
 }
