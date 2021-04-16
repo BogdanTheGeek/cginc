@@ -11,8 +11,14 @@
 
 //structures
 typedef struct Segment{
-	Vector3 point;
+	Vector3 point;	//end point for line or center for circle
+	Vector3 center;	//end point for line or center for circle
 	Color color;
+	float radius;	//arc radius
+	float angle;	//arc angle
+	float offset;	//arc quadrant offset
+	float k;	//z step
+	bool arc;
 }Segment;
 
 //globals 
@@ -114,9 +120,9 @@ int main(int argc, char *argv[]) {
 
 		BeginMode3D(camera);
 
-		//DrawGcodePath(path, path_len);
-		free(path);
-		parse_gcode(gcode_file, &path);
+		DrawGcodePath(path, path_len);
+		//free(path);
+		//parse_gcode(gcode_file, &path);
 
 		if(model_file)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
@@ -373,17 +379,32 @@ int parse_gcode(char *gcode_file, Segment **output){
 				//printVector3("last_position", last_position);
 				//printVector3("l_end", l_end);
 				//printVector3("center", center);
-				DrawCircleSector3D(center, radius, rotationAngle, offsetAngle, u.z, l_color);
+				//DrawCircleSector3D(center, radius, rotationAngle, offsetAngle, u.z, l_color);
+				seg_index++;
+				segments[seg_index].point.x = l_end.x;
+				segments[seg_index].point.y = l_end.y;
+				segments[seg_index].point.z = l_end.z;
+				segments[seg_index].center.x = center.x;
+				segments[seg_index].center.y = center.y;
+				segments[seg_index].center.z = center.z;
+				segments[seg_index].color = l_color;
+				segments[seg_index].radius = radius;
+				segments[seg_index].angle = rotationAngle;
+				segments[seg_index].offset = offsetAngle;
+				segments[seg_index].k = u.z;
+				segments[seg_index].arc = true;
 			}
 			else {
-				DrawLine3D(last_position, l_end, l_color);
+				//DrawLine3D(last_position, l_end, l_color);
 			}
-
+			//this is added for the next line too use as start
 			seg_index++;
 			segments[seg_index].point.x = l_end.x;
 			segments[seg_index].point.y = l_end.y;
 			segments[seg_index].point.z = l_end.z;
 			segments[seg_index].color = l_color;
+			segments[seg_index].arc = false;
+
 
 			last_position.x = l_end.x;
 			last_position.y = l_end.y;
@@ -405,6 +426,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 void DrawGcodePath(Segment * seg, int len){
 	for(int i=1; i<len; i++){
 		//printf("%d: %f, %f, %f\n", i, seg[i].point.x, seg[i].point.y, seg[i].point.z);
-		DrawLine3D(seg[i-1].point, seg[i].point, seg[i].color);
+		if(seg[i].arc) DrawCircleSector3D(seg[i].center, seg[i].radius, seg[i].angle, seg[i].offset, seg[i].k, seg[i].color);
+		else DrawLine3D(seg[i-1].point, seg[i].point, seg[i].color);
 	}
 }
