@@ -206,3 +206,14 @@ void printVector3(char* name, Vector3 v){
 	printf("Vecotor3 %s = {\n  .x =%f;\n  .y=%f;\n .z=%f;\n}\n", name, v.x, v.y, v.z);
 
 }
+
+void DrawOrigin(){
+		const Vector3 origin = {0.0f, 0.0f, 0.0f};
+		const Vector3 x = {1.0f, 0.0f, 0.0f};
+		const Vector3 y = {0.0f, 1.0f, 0.0f};
+		const Vector3 z = {0.0f, 0.0f, 1.0f};
+		DrawLine3D(origin, x, RED);
+		DrawLine3D(origin, y, GREEN);
+		DrawLine3D(origin, z, BLUE);
+}
+

@@ -49,19 +49,21 @@ int main(int argc, char *argv[]) {
 
 	char * gcode_file = NULL;
 	char * model_file = NULL;
+	bool msaa = false;
 
 	for(int i=1; i<argc; i++){
 		if(strstr(argv[i], ".stl")) model_file = argv[i];
 		if(strstr(argv[i], ".nc") || strstr(argv[i], ".gc") || strstr(argv[i], ".ngc") || strstr(argv[i], ".gcode")) gcode_file = argv[i];
+		if(strstr(argv[i], "--msaa")) msaa = true;
 	}
 
 	const int screenWidth = 800;
 	const int screenHeight = 450;
 
-	SetConfigFlags(
-			FLAG_WINDOW_RESIZABLE
-			//| FLAG_MSAA_4X_HINT  // Enable Multi Sampling Anti Aliasing 4x (if available)
-			);
+	if(msaa)
+		SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT);
+	else
+		SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 
 	InitWindow(screenWidth, screenHeight, "CGinC");
 
@@ -440,14 +442,4 @@ void DrawGcodePath(Segment * seg, int len){
 		if(seg[i].arc) DrawCircleSector3D(seg[i].center, seg[i].radius, seg[i].angle, seg[i].offset, seg[i].k, seg[i].color);
 		else DrawLine3D(seg[i-1].point, seg[i].point, seg[i].color);
 	}
-}
-
-void DrawOrigin(){
-		const Vector3 origin = {0.0f, 0.0f, 0.0f};
-		const Vector3 x = {1.0f, 0.0f, 0.0f};
-		const Vector3 y = {0.0f, 1.0f, 0.0f};
-		const Vector3 z = {0.0f, 0.0f, 1.0f};
-		DrawLine3D(origin, x, RED);
-		DrawLine3D(origin, y, GREEN);
-		DrawLine3D(origin, z, BLUE);
 }
