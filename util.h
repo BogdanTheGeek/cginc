@@ -1,6 +1,11 @@
 //inlcude general utilities for code that is not important enough to be in main.c
 #include <stdint.h>
 
+//types
+typedef struct {
+	bool show_origin;
+} Settings_t;
+
 //quake inverse square root, credit goes to ID Software I guess
 float Q_rsqrt( float number )
 {	
@@ -124,6 +129,11 @@ void CustomUpdateCamera(Camera *camera){
 	camera->position.y = -sinf(angle.y)*targetDistance + camera->target.y;
 	camera->position.z = -cosf(angle.x)*targetDistance*cosf(angle.y) + camera->target.z;
 
+}
+
+void CheckInputs(Settings_t *s)
+{
+	if(IsKeyPressed(KEY_O)) s->show_origin = !s->show_origin;
 }
 
 //this draws the grid in the xy plane

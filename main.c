@@ -9,6 +9,12 @@
 #include "settings.h"
 #include "util.h"	// this should be the last include
 
+//macros
+#define BLEND_FACTOR   150	//0-255 where 255 is no blending and 0 is no color
+#define TRAVEL_COLOR   (Color){255, 0, 0, BLEND_FACTOR} // Red
+#define MOVE_COLOR     (Color){0, 255, 0, BLEND_FACTOR} // Green
+#define ARC_COLOR      (Color){0, 0, 255, BLEND_FACTOR} // Blue
+
 //structures
 typedef struct Segment{
 	Vector3 point;	//end point for line or center for circle
@@ -25,9 +31,14 @@ typedef struct Segment{
 Color main_color = {187, 35, 255, 255};
 float scale = 0.10f;
 
+Settings_t settings = {
+	.show_origin = true
+};
+
 //prototypes
 int parse_gcode(char *gcode_file, Segment **output);
 void DrawGcodePath(Segment * seg, int len);
+void DrawOrigin();
 
 int main(int argc, char *argv[]) {
 
@@ -102,6 +113,7 @@ int main(int argc, char *argv[]) {
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
 		CustomUpdateCamera(&camera); 
+		CheckInputs(&settings);
 
 		light.position.x = camera.position.x;
 		light.position.y = camera.position.y;
@@ -118,14 +130,15 @@ int main(int argc, char *argv[]) {
 
 		BeginMode3D(camera);
 
+		DrawXYGrid();
+		if(settings.show_origin)DrawOrigin();
+
 		DrawGcodePath(path, path_len);
 		//free(path);
 		//parse_gcode(gcode_file, &path);
 
 		if(model_file)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
-
-		DrawXYGrid();
 
 		EndMode3D();
 
@@ -207,14 +220,14 @@ int parse_gcode(char *gcode_file, Segment **output){
 				absolute = false;
 				break;
 			case 0:		//rapid
-				l_color = RED;	
+				l_color = TRAVEL_COLOR;
 				break;
 			case 1:		//feed
-				l_color = GREEN;	
+				l_color = MOVE_COLOR;
 				break;
 			case 2:	//clockwise arc
 			case 3:	//counterclockwise arc
-				l_color = BLUE;
+				l_color = ARC_COLOR;
 				break;
 			default:
 				break;
@@ -427,4 +440,14 @@ void DrawGcodePath(Segment * seg, int len){
 		if(seg[i].arc) DrawCircleSector3D(seg[i].center, seg[i].radius, seg[i].angle, seg[i].offset, seg[i].k, seg[i].color);
 		else DrawLine3D(seg[i-1].point, seg[i].point, seg[i].color);
 	}
+}
+
+void DrawOrigin(){
+		const Vector3 origin = {0.0f, 0.0f, 0.0f};
+		const Vector3 x = {1.0f, 0.0f, 0.0f};
+		const Vector3 y = {0.0f, 1.0f, 0.0f};
+		const Vector3 z = {0.0f, 0.0f, 1.0f};
+		DrawLine3D(origin, x, RED);
+		DrawLine3D(origin, y, GREEN);
+		DrawLine3D(origin, z, BLUE);
 }
