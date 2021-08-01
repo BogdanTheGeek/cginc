@@ -261,6 +261,15 @@ int parse_gcode(char *gcode_file, Segment **output){
 				continue;	//go to top of loop
 			}
 
+			//ignore feed
+			char *f_pos = strchr(line, 'F');
+			if(f_pos != NULL){
+				char *skip_to = strchr(f_pos, ' ');
+				if(skip_to != NULL) strcpy(f_pos, skip_to);
+				else break;
+				printf("here %s\n", line);
+			}
+
 			float x,y,z;	//get coordinates
 			char *x_pos = strchr(line, 'X');
 			char *y_pos = strchr(line, 'Y');
