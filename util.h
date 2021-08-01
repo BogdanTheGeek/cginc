@@ -6,6 +6,7 @@ typedef struct {
 	bool show_origin;
 	bool show_grid;
 	bool show_model;
+	bool camera_ortho;
 } Settings_t;
 
 //quake inverse square root, credit goes to ID Software I guess
@@ -31,7 +32,7 @@ float fast_abs(float f){
 
 //these are some modified raylib.h function
 //this makes the camera work like in normal CAD programs
-void CustomUpdateCamera(Camera *camera){
+void CustomUpdateCamera(Camera *camera, Settings_t *s){
 
 	if(IsKeyPressed(KEY_HOME)){
 		camera->position = (Vector3){ 0.0f, -10.0f, 10.0f };  // Camera position
@@ -39,6 +40,9 @@ void CustomUpdateCamera(Camera *camera){
 		camera->up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
 		return;
 	}
+
+	double scroll_sensitivity = CAMERA_MOUSE_SCROLL_SENSITIVITY;
+	if(s->camera_ortho) scroll_sensitivity = 0.0f;
 
 	static Vector2 previousMousePosition = { 0.0f, 0.0f };
 
@@ -51,6 +55,12 @@ void CustomUpdateCamera(Camera *camera){
 	mousePositionDelta.y = mousePosition.y - previousMousePosition.y;
 
 	previousMousePosition = mousePosition;
+
+	if(s->camera_ortho ){
+		static float zoom = 0;
+		zoom = mouseWheelMove*CAMERA_MOUSE_SCROLL_SENSITIVITY_ORTHO;
+		if(camera->fovy+zoom > 0) camera->fovy += zoom;
+	}
 
 	float dx = camera->target.x - camera->position.x;
 	float dy = camera->target.y - camera->position.y;
@@ -68,40 +78,40 @@ void CustomUpdateCamera(Camera *camera){
 	// Camera zoom
 	if ((targetDistance < CAMERA_FREE_DISTANCE_MAX_CLAMP) && (mouseWheelMove < 0))
 	{
-		targetDistance -= (mouseWheelMove*CAMERA_MOUSE_SCROLL_SENSITIVITY);
+		targetDistance -= (mouseWheelMove*scroll_sensitivity);
 		if (targetDistance > CAMERA_FREE_DISTANCE_MAX_CLAMP) targetDistance = CAMERA_FREE_DISTANCE_MAX_CLAMP;
 	}
 
 	// Camera looking down
 	else if ((camera->position.y > camera->target.y) && (targetDistance == CAMERA_FREE_DISTANCE_MAX_CLAMP) && (mouseWheelMove < 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
+		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*scroll_sensitivity/targetDistance;
+		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*scroll_sensitivity/targetDistance;
+		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*scroll_sensitivity/targetDistance;
 	}
 	else if ((camera->position.y > camera->target.y) && (camera->target.y >= 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
+		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*scroll_sensitivity/targetDistance;
+		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*scroll_sensitivity/targetDistance;
+		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*scroll_sensitivity/targetDistance;
 	}
 	else if ((camera->position.y > camera->target.y) && (camera->target.y < 0) && (mouseWheelMove > 0)){
-		targetDistance -= (mouseWheelMove*CAMERA_MOUSE_SCROLL_SENSITIVITY);
+		targetDistance -= (mouseWheelMove*scroll_sensitivity);
 		if (targetDistance < CAMERA_FREE_DISTANCE_MIN_CLAMP) targetDistance = CAMERA_FREE_DISTANCE_MIN_CLAMP;
 	}
 
 
 	// Camera looking up
 	else if ((camera->position.y < camera->target.y) && (targetDistance == CAMERA_FREE_DISTANCE_MAX_CLAMP) && (mouseWheelMove < 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
+		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*scroll_sensitivity/targetDistance;
+		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*scroll_sensitivity/targetDistance;
+		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*scroll_sensitivity/targetDistance;
 	}
 	else if ((camera->position.y < camera->target.y) && (camera->target.y <= 0)){
-		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
-		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*CAMERA_MOUSE_SCROLL_SENSITIVITY/targetDistance;
+		camera->target.x += mouseWheelMove*(camera->target.x - camera->position.x)*scroll_sensitivity/targetDistance;
+		camera->target.y += mouseWheelMove*(camera->target.y - camera->position.y)*scroll_sensitivity/targetDistance;
+		camera->target.z += mouseWheelMove*(camera->target.z - camera->position.z)*scroll_sensitivity/targetDistance;
 	}
 	else if ((camera->position.y < camera->target.y) && (camera->target.y > 0) && (mouseWheelMove > 0)){
-		targetDistance -= (mouseWheelMove*CAMERA_MOUSE_SCROLL_SENSITIVITY);
+		targetDistance -= (mouseWheelMove*scroll_sensitivity);
 		if (targetDistance < CAMERA_FREE_DISTANCE_MIN_CLAMP) targetDistance = CAMERA_FREE_DISTANCE_MIN_CLAMP;
 	}
 
@@ -138,6 +148,7 @@ void CheckInputs(Settings_t *s)
 	if(IsKeyPressed(KEY_O)) s->show_origin = !s->show_origin;
 	if(IsKeyPressed(KEY_G)) s->show_grid = !s->show_grid;
 	if(IsKeyPressed(KEY_M)) s->show_model = !s->show_model;
+	if(IsKeyPressed(KEY_C)) s->camera_ortho = !s->camera_ortho;
 }
 
 //this draws the grid in the xy plane

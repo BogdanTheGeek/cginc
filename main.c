@@ -34,7 +34,8 @@ float scale = 0.10f;
 Settings_t settings = {
 	.show_origin = true,
 	.show_grid = true,
-	.show_model = true
+	.show_model = true,
+	.camera_ortho = false
 };
 
 //prototypes
@@ -74,7 +75,7 @@ int main(int argc, char *argv[]) {
 	camera.position = (Vector3){ 0.0f, -10.0f, 10.0f };  // Camera position
 	camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };      // Camera looking at point
 	camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
-	camera.fovy = 45.0f;                                // Camera field-of-view Y
+	camera.fovy = CAMERA_FOVY_PERSP;                                // Camera field-of-view Y
 	camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
 
 	SetCameraMode(camera, CAMERA_CUSTOM); // Set a first person camera mode
@@ -116,8 +117,21 @@ int main(int argc, char *argv[]) {
 
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
-		CustomUpdateCamera(&camera); 
 		CheckInputs(&settings);
+		CustomUpdateCamera(&camera, &settings);
+
+		static bool last_camera_ortho = false;
+		if(settings.camera_ortho && !last_camera_ortho){
+			last_camera_ortho = true;
+			camera.fovy = CAMERA_FOVY_ORTHO;
+			camera.projection = CAMERA_ORTHOGRAPHIC;
+		}
+		else if(!settings.camera_ortho && last_camera_ortho) {
+			last_camera_ortho = false;
+			camera.fovy = CAMERA_FOVY_PERSP;
+			camera.projection = CAMERA_PERSPECTIVE;
+		}
+
 
 		light.position.x = camera.position.x;
 		light.position.y = camera.position.y;

@@ -26,9 +26,15 @@ To run simply pass the path to either a gcode file(.nc, .ngc, .gcode, .gc) and/o
 ./cginc test.nc resource/test.stl
 ```
 Use `Left Mouse` button to orbit and `Right Mouse` button to pan.
+
 Pressing `Home` on the keyboard returns you to home location.
+
+Pressing `c` on the keyboard toggles between Perspective and Orthogonal View.
+
 Pressing `g` on the keyboard toggles the grid.
+
 Pressing `o` on the keyboard toggles the origin.
+
 Pressing `m` on the keyboard toggles the 3D model.
 
 
