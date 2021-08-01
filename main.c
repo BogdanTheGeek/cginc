@@ -28,7 +28,7 @@ typedef struct Segment{
 }Segment;
 
 //globals 
-Color main_color = {187, 35, 255, 255};
+Color model_color = {187, 35, 255, 255};
 float scale = 0.10f;
 
 Settings_t settings = {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 	SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
 
 	//Texture texture = LoadTexture("resources/texel_checker.png");
-	Image texture_image = GenImageColor(1.0f, 1.0f, main_color);
+	Image texture_image = GenImageColor(1.0f, 1.0f, model_color);
 	Texture texture = LoadTextureFromImage(texture_image);
 
 	Shader shader = LoadShader(TextFormat("resources/shaders/glsl%i/base_lighting.vs", GLSL_VERSION), 
