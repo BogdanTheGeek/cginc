@@ -7,6 +7,7 @@ typedef struct {
 	bool show_grid;
 	bool show_model;
 	bool camera_ortho;
+	bool dark_mode;
 } Settings_t;
 
 //quake inverse square root, credit goes to ID Software I guess
@@ -149,11 +150,19 @@ void CheckInputs(Settings_t *s)
 	if(IsKeyPressed(KEY_G)) s->show_grid = !s->show_grid;
 	if(IsKeyPressed(KEY_M)) s->show_model = !s->show_model;
 	if(IsKeyPressed(KEY_C)) s->camera_ortho = !s->camera_ortho;
+	if(IsKeyPressed(KEY_D)) s->dark_mode = !s->dark_mode;
 }
 
 //this draws the grid in the xy plane
-void DrawXYGrid(){
+void DrawXYGrid(Settings_t *s){
     int half = 100;
+		float minor_shade = 0.5f;
+		float major_shade = 0.9f;
+
+		if(s->dark_mode){
+			minor_shade = 0.5;
+			major_shade = 0.2;
+		}
 
     rlCheckRenderBatchLimit((half + 2)*4);
 
@@ -162,17 +171,17 @@ void DrawXYGrid(){
         {
             if (i % 10 == 0)
             {
-                rlColor3f(0.5f, 0.5f, 0.5f);
-                rlColor3f(0.5f, 0.5f, 0.5f);
-                rlColor3f(0.5f, 0.5f, 0.5f);
-                rlColor3f(0.5f, 0.5f, 0.5f);
+                rlColor3f(minor_shade, minor_shade, minor_shade);
+                rlColor3f(minor_shade, minor_shade, minor_shade);
+                rlColor3f(minor_shade, minor_shade, minor_shade);
+                rlColor3f(minor_shade, minor_shade, minor_shade);
             }
             else
             {
-                rlColor3f(0.9, 0.9, 0.9);
-                rlColor3f(0.9, 0.9, 0.9);
-                rlColor3f(0.9, 0.9, 0.9);
-                rlColor3f(0.9, 0.9, 0.9);
+                rlColor3f(major_shade, major_shade, major_shade);
+                rlColor3f(major_shade, major_shade, major_shade);
+                rlColor3f(major_shade, major_shade, major_shade);
+                rlColor3f(major_shade, major_shade, major_shade);
             }
 
 						//vertical

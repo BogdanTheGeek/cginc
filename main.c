@@ -35,7 +35,8 @@ Settings_t settings = {
 	.show_origin = true,
 	.show_grid = true,
 	.show_model = true,
-	.camera_ortho = false
+	.camera_ortho = false,
+	.dark_mode = true
 };
 
 //prototypes
@@ -144,11 +145,14 @@ int main(int argc, char *argv[]) {
 
 		BeginDrawing();
 
-		ClearBackground(RAYWHITE);
+		if(settings.dark_mode)
+			ClearBackground(BLACK);
+		else
+			ClearBackground(RAYWHITE);
 
 		BeginMode3D(camera);
 
-		if(settings.show_grid)DrawXYGrid();
+		if(settings.show_grid)DrawXYGrid(&settings);
 		if(settings.show_origin)DrawOrigin();
 
 		DrawGcodePath(path, path_len);

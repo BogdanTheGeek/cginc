@@ -13,18 +13,20 @@ Everything is written in C, with the help of [raylib](https://www.raylib.com/), 
 This is still in the early days of development, but I am planning on releasing binaries.
 
 # Compile
-To compile make sure you have downloaded, compiled and installed raylib with default parameter.
+To compile make sure you have downloaded, compiled and installed raylib with default parameters.
 
 Run:
 ```
 ./compile.sh
 ```
 
-# Running
+# Running & Features
 To run simply pass the path to either a gcode file(.nc, .ngc, .gcode, .gc) and/or a binary stl file(OpenSCAD only does ASCII stl's do you will need to convert it to binary format):
 ```
 ./cginc test.nc resource/test.stl
 ```
+Passing in the `--msaa` parameter enables antialiasing.
+
 Use `Left Mouse` button to orbit and `Right Mouse` button to pan.
 
 Pressing `Home` on the keyboard returns you to home location.
@@ -36,6 +38,8 @@ Pressing `g` on the keyboard toggles the grid.
 Pressing `o` on the keyboard toggles the origin.
 
 Pressing `m` on the keyboard toggles the 3D model.
+
+Pressing `d` on the keyboard toggles dark mode.
 
 
 # Thanks to:
