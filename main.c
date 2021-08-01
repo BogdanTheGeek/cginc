@@ -5,7 +5,7 @@
 #define RLIGHTS_IMPLEMENTATION
 #include "rlights.h"
 #include "stl_loader.h"
-#define DEBUG_MODE
+//#define DEBUG_MODE
 #include "settings.h"
 #include "util.h"	// this should be the last include
 
@@ -32,7 +32,9 @@ Color main_color = {187, 35, 255, 255};
 float scale = 0.10f;
 
 Settings_t settings = {
-	.show_origin = true
+	.show_origin = true,
+	.show_grid = true,
+	.show_model = true
 };
 
 //prototypes
@@ -132,21 +134,21 @@ int main(int argc, char *argv[]) {
 
 		BeginMode3D(camera);
 
-		DrawXYGrid();
+		if(settings.show_grid)DrawXYGrid();
 		if(settings.show_origin)DrawOrigin();
 
 		DrawGcodePath(path, path_len);
 		//free(path);
 		//parse_gcode(gcode_file, &path);
 
-		if(model_file)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
+		if(model_file && settings.show_model)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
 		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
 
 		EndMode3D();
 
 		DEBUG_SHOW(DrawFPS(10, 10);)
 
-			EndDrawing();
+		EndDrawing();
 	}
 
 	free(path);

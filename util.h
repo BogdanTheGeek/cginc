@@ -4,6 +4,8 @@
 //types
 typedef struct {
 	bool show_origin;
+	bool show_grid;
+	bool show_model;
 } Settings_t;
 
 //quake inverse square root, credit goes to ID Software I guess
@@ -134,6 +136,8 @@ void CustomUpdateCamera(Camera *camera){
 void CheckInputs(Settings_t *s)
 {
 	if(IsKeyPressed(KEY_O)) s->show_origin = !s->show_origin;
+	if(IsKeyPressed(KEY_G)) s->show_grid = !s->show_grid;
+	if(IsKeyPressed(KEY_M)) s->show_model = !s->show_model;
 }
 
 //this draws the grid in the xy plane
