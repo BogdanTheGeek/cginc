@@ -451,6 +451,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 	free(line_alloc);
 
 	*output = segments;
+	seg_index++;  //from index to number of segments
 
 	printf("Parsing Complete, %d points found!\n", seg_index);
 	return seg_index;
