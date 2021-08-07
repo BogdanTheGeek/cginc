@@ -307,6 +307,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 			if(seg_index == seg_block-1){
 				seg_block += 1024;
 				segments = (Segment *)realloc(segments, sizeof(Segment)*seg_block);
+					printf("Reallocing new size = %0.1fK\n", seg_block/1024.0);
 				if(segments == NULL){
 					perror("Could not allocate more space for segments!");
 					exit(-1);
