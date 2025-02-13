@@ -79,7 +79,6 @@ int main(int argc, char *argv[]) {
 	camera.fovy = CAMERA_FOVY_PERSP;                                // Camera field-of-view Y
 	camera.projection = CAMERA_PERSPECTIVE;             // Camera mode type
 
-	SetCameraMode(camera, CAMERA_CUSTOM); // Set a first person camera mode
 	SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
 
 	//Texture texture = LoadTexture("resources/texel_checker.png");
