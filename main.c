@@ -1,5 +1,6 @@
 #include "raylib.h"
 #include <math.h>
+#include <stdio.h>
 #include <string.h>
 #include "raymath.h"
 #define RLIGHTS_IMPLEMENTATION
@@ -8,6 +9,8 @@
 //#define DEBUG_MODE
 #include "settings.h"
 #include "util.h"	// this should be the last include
+
+#include "shader.h"
 
 //macros
 #define BLEND_FACTOR   150	//0-255 where 255 is no blending and 0 is no color
@@ -44,20 +47,36 @@ int parse_gcode(char *gcode_file, Segment **output);
 void DrawGcodePath(Segment * seg, int len);
 void DrawOrigin();
 
+void usage(char * exec_name ){
+   printf("Usage: %s <model.stl> <path.nc> [--msaa]\n", exec_name);
+   printf("  model.stl : 3D model file in STL format\n");
+   printf("  path.nc    : Gcode file/files to visualize\n");
+   printf("  --msaa     : Enable 4x MSAA for smoother rendering (optional)\n");
+}
+
 int main(int argc, char *argv[]) {
 
 	if(argc<2){
 		printf("No file provided %d\n", argc);
+      usage(argv[0]);
 		exit(-1);
 	}
+   if(argc>100){
+      printf("Too many files provided, max 100\n");
+      usage(argv[0]);
+      exit(-1);
+   }
 
-	char * gcode_file = NULL;
+	char *gcode_files[100] = {0};
+   int gcode_files_count = 0;
 	char * model_file = NULL;
 	bool msaa = false;
 
 	for(int i=1; i<argc; i++){
 		if(strstr(argv[i], ".stl")) model_file = argv[i];
-		if(strstr(argv[i], ".nc") || strstr(argv[i], ".gc") || strstr(argv[i], ".ngc") || strstr(argv[i], ".gcode")) gcode_file = argv[i];
+		if(strstr(argv[i], ".nc") || strstr(argv[i], ".gc") || strstr(argv[i], ".ngc") || strstr(argv[i], ".gcode")){
+         gcode_files[gcode_files_count++] = argv[i];
+      }
 		if(strstr(argv[i], "--msaa")) msaa = true;
 	}
 
@@ -85,8 +104,13 @@ int main(int argc, char *argv[]) {
 	Image texture_image = GenImageColor(1.0f, 1.0f, model_color);
 	Texture texture = LoadTextureFromImage(texture_image);
 
+#if 1
+   Shader shader = LoadShaderFromMemory(vertexShaderCode, fragmentShaderCode);
+#else
 	Shader shader = LoadShader(TextFormat("resources/shaders/glsl%i/base_lighting.vs", GLSL_VERSION), 
 			TextFormat("resources/shaders/glsl%i/lighting.fs", GLSL_VERSION));
+   printf("Shader loaded from file %d\n", GLSL_VERSION);
+#endif
 
 	// Get some shader loactions
 	shader.locs[SHADER_LOC_MATRIX_MODEL] = GetShaderLocation(shader, "matModel");
@@ -110,10 +134,11 @@ int main(int argc, char *argv[]) {
 		model.materials[0].shader = shader;
 	}
 
-
-	Segment *path;
-	int path_len = parse_gcode(gcode_file, &path);
-
+	Segment *paths[100] = {0};
+   int path_lens[100] = {0};
+   for(int i=0; i<gcode_files_count; i++){
+      path_lens[i] = parse_gcode(gcode_files[i], &paths[i]);
+   }
 
 	while (!WindowShouldClose())    // Detect window close button or ESC key
 	{
@@ -154,12 +179,18 @@ int main(int argc, char *argv[]) {
 		if(settings.show_grid)DrawXYGrid(&settings);
 		if(settings.show_origin)DrawOrigin();
 
-		DrawGcodePath(path, path_len);
-		//free(path);
-		//parse_gcode(gcode_file, &path);
+      for(int i=0; i<gcode_files_count; i++){
+         DrawGcodePath(paths[i], path_lens[i]);
+      }
 
-		if(model_file && settings.show_model)DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
-		//DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
+		if(model_file && settings.show_model)
+      {
+         DrawModel(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, GRAY);   // Draw 3d model with texture
+         if(settings.wires)
+         {
+            DrawModelWires(model, (Vector3){ 0.0f, 0.0f, 0.0f }, scale, BLACK);   // Draw 3d model with texture
+         }
+      }
 
 		EndMode3D();
 
@@ -168,7 +199,7 @@ int main(int argc, char *argv[]) {
 		EndDrawing();
 	}
 
-	free(path);
+	// free(path);
 	if(model_file){
 		UnloadModel(model);
 		UnloadTexture(texture);
@@ -193,14 +224,15 @@ int parse_gcode(char *gcode_file, Segment **output){
 	int seg_index = 0;
 
 	Segment * segments = (Segment *)malloc(sizeof(Segment)*seg_block);
+   printf("segments %p\n", segments);
 
 	segments[seg_index].point.x = 0;
 	segments[seg_index].point.y = 0;
 	segments[seg_index].point.z = 0;
 	segments[seg_index].color = BLACK;
 
-	char *line, *line_alloc = (char *)malloc(1024);
-	line = line_alloc;
+	char *line;
+   static char *line_alloc[1024] = {0};
 
 	Vector3 last_position = {0,0,0};
 	Vector3 l_end = {0,0,0};
@@ -211,6 +243,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 	while(1){	//go through all the lines
 		
 
+      line = line_alloc;
 		if(fgets(line, 1023, g) == NULL){
 			printf("No string read!\n");
 			break;	//read line
@@ -306,6 +339,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 			if(seg_index == seg_block-1){
 				seg_block += 1024;
 				segments = (Segment *)realloc(segments, sizeof(Segment)*seg_block);
+               printf("Realloc segments %p\n", segments);
 					printf("Reallocing new size = %0.1fK\n", seg_block/1024.0);
 				if(segments == NULL){
 					perror("Could not allocate more space for segments!");
@@ -354,16 +388,9 @@ int parse_gcode(char *gcode_file, Segment **output){
 					center.z = last_position.z;
 				}
 				else{
-					if(absolute){
-						center.x = i;
-						center.y = j;
-						center.z = k;
-					}
-					else{
-						center.x = last_position.x + i;
-						center.y = last_position.y + j;
-						center.z = last_position.z + k;
-					}
+               center.x = last_position.x + i;
+               center.y = last_position.y + j;
+               center.z = last_position.z + k;
 				}
 
 				if(z_pos == NULL) l_end.z = last_position.z;
@@ -457,7 +484,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 
 	}
 	fclose(g);
-	free(line_alloc);
+	// free(line_alloc);
 
 	*output = segments;
 	seg_index++;  //from index to number of segments
@@ -468,7 +495,7 @@ int parse_gcode(char *gcode_file, Segment **output){
 
 void DrawGcodePath(Segment * seg, int len){
 	for(int i=1; i<len; i++){
-		//printf("%d: %f, %f, %f\n", i, seg[i].point.x, seg[i].point.y, seg[i].point.z);
+		// printf("%d: %f, %f, %f\n", i, seg[i].point.x, seg[i].point.y, seg[i].point.z);
 		if(seg[i].arc) DrawCircleSector3D(seg[i].center, seg[i].radius, seg[i].angle, seg[i].offset, seg[i].k, seg[i].color);
 		else DrawLine3D(seg[i-1].point, seg[i].point, seg[i].color);
 	}

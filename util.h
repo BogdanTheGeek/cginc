@@ -8,6 +8,7 @@ typedef struct {
 	bool show_model;
 	bool camera_ortho;
 	bool dark_mode;
+   bool wires;
 } Settings_t;
 
 //quake inverse square root, credit goes to ID Software I guess
@@ -151,6 +152,7 @@ void CheckInputs(Settings_t *s)
 	if(IsKeyPressed(KEY_M)) s->show_model = !s->show_model;
 	if(IsKeyPressed(KEY_C)) s->camera_ortho = !s->camera_ortho;
 	if(IsKeyPressed(KEY_D)) s->dark_mode = !s->dark_mode;
+	if(IsKeyPressed(KEY_W)) s->wires = !s->wires;
 }
 
 //this draws the grid in the xy plane
